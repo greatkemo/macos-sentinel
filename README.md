@@ -190,6 +190,7 @@ Software-update and bandwidth-consuming network-quality checks run only when the
 ## Features
 
 - **Overview:** four-row live HUD — three top tiles (About This Mac, assessment, diagnostics); equal-sized left-aligned circular instrument tiles (CPU ring, memory distribution doughnut, storage ring, power ring) with a padded vertical divider and details on the right; CPU/GPU/network charts; then the correlated performance timeline. A Tools toolbar hosts network test, software updates, sample age, uptime and connection status. Sampling, alerts, exports and saved sessions live under **Settings**.
+- **Applications:** table of `.app` bundles under `/Applications` and `~/Applications` only (not `/System`). Shows version, App Store Yes/No, signed status, developer name, Team ID, architecture, path, and Reveal in Finder. First scan runs `codesign`/`lipo` per app and is cached for five minutes.
 - **Settings:** sampling interval, adaptive idle sampling, compact view, alert rules, saved sessions/comparisons and exports.
 - **Overview instruments:** overall and per-logical-core CPU, physical memory categories as a doughnut with legend, macOS-compatible startup storage availability, power/battery (AC vs charge ring, hardware details and live system draw when Apple Silicon power telemetry is present), swap, actual OS memory-pressure state where available, disk read/write throughput, per-interface throughput, and CPU/network/GPU history. Host identity includes machine name, marketing year when known, chip, memory, startup disk, serial number, macOS version with build, and CPU architecture.
 - **History:** 30 seconds, 5 minutes, 30 minutes or 1 hour, using sample timestamps on a time-scaled axis. At most 3,600 aggregate samples are retained in server memory for up to one hour. Rendering downsamples to roughly 300 points; export retains the selected window's samples. Gaps are shown rather than joined as continuous measurements. Live history survives browser reconnects but not server restarts; optional saved sessions persist separately.
@@ -238,6 +239,7 @@ This protects against untrusted web origins; it is not multi-user authentication
 | `LICENSE` | MIT license for this project |
 | `dashboard/security.py` | Host, Origin, session and response-header controls |
 | `dashboard/collectors.py` | Native parsing and read-only system collectors |
+| `dashboard/installed_apps.py` | `/Applications` and `~/Applications` inventory, codesign metadata |
 | `dashboard/native_capacity.py` | Read-only Foundation capacity bridge |
 | `dashboard/gpu.py` | Validated GPU driver counters and unavailable handling |
 | `dashboard/telemetry.py` | Dedicated-thread sampler and process identities |
@@ -271,6 +273,8 @@ API errors use `{"detail":"..."}`. At most four async command checks/inspectors 
 | DELETE | `/api/storage/scans` | Cancel current scan and retain partial results |
 | GET | `/api/storage/directories` | Compatibility route returning a progressive scan snapshot |
 | GET | `/api/system-info?force=false` | Cached inventory; `force=true` bypasses cache; timeout 180s |
+| GET | `/api/applications?force=false` | Cached `/Applications` + `~/Applications` inventory with signing metadata |
+| POST | `/api/applications/reveal` | Body `{"path":"/Applications/Example.app"}`; Finder reveal for allowed bundles |
 | GET | `/api/host/product-image` | PNG from local CoreTypes product icon for this Mac; 404 if unavailable |
 | GET | `/api/history?seconds=300` | Aggregate samples (window clamped 30–3600s), events and interval |
 | POST | `/api/settings` | Body `{"interval":2}`; allowed range 1–10 seconds |

@@ -54,6 +54,7 @@ from dashboard.sessions import SessionStore
 from dashboard.telemetry import TelemetrySampler
 
 from dashboard.common import CommandFailed
+from dashboard.installed_apps import collect_installed_applications, resolve_application_path
 from dashboard.collectors import (
     finite,
     parse_softwareupdate,
@@ -427,6 +428,52 @@ async def system_info(force: bool = False) -> dict:
         return await get_system_info(force)
     except CommandFailed as exc:
         raise HTTPException(status_code=exc.status, detail=exc.message) from exc
+
+
+# --- Applications tab (/Applications and ~/Applications only) -----------------
+
+APPLICATIONS_TTL = 300
+_applications_cache: dict = {"expires": 0.0, "payload": None}
+_applications_lock = asyncio.Lock()
+
+
+async def get_installed_applications(force: bool = False) -> dict:
+    async with _applications_lock:
+        now = time.monotonic()
+        cached = _applications_cache.get("payload")
+        if not force and cached is not None and now < float(_applications_cache.get("expires") or 0):
+            payload = dict(cached)
+            payload["cached"] = True
+            return payload
+        payload = await asyncio.to_thread(collect_installed_applications)
+        payload["cached"] = False
+        _applications_cache["payload"] = payload
+        _applications_cache["expires"] = time.monotonic() + APPLICATIONS_TTL
+        return payload
+
+
+@app.get("/api/applications")
+async def installed_applications(force: bool = False) -> dict:
+    try:
+        return await get_installed_applications(force)
+    except CommandFailed as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.message) from exc
+
+
+class ApplicationRevealRequest(BaseModel):
+    path: str = Field(min_length=1, max_length=4096)
+
+
+@app.post("/api/applications/reveal")
+async def reveal_application(body: ApplicationRevealRequest) -> dict:
+    try:
+        target = str(resolve_application_path(body.path))
+    except CommandFailed as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.message) from exc
+    code, _, error = await run_command(["/usr/bin/open", "-R", target], timeout=5)
+    if code:
+        raise HTTPException(502, error[:180] or "Finder could not reveal this application")
+    return {"ok": True}
 
 
 _product_image_cache: dict[str, bytes | None] = {"key": "", "png": None}

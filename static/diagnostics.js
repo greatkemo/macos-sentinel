@@ -141,6 +141,9 @@
     $('app-search').addEventListener('input',()=>{systemSection='applications';renderSystem();});
     ['app-kind','app-sort','app-order'].forEach((id)=>$(id).addEventListener('change',()=>{systemSection='applications';renderSystem();}));
     $('system-refresh').addEventListener('click',()=>loadSystemInfo(true));
+    $('apps-refresh').addEventListener('click',()=>loadInstalledApps(true));
+    $('apps-search').addEventListener('input',()=>renderInstalledApps());
+    ['apps-store','apps-signed','apps-location','apps-sort','apps-order'].forEach((id)=>$(id).addEventListener('change',()=>renderInstalledApps()));
     document.addEventListener('keydown',event=>{
       if(event.key!=='Tab'||$('modal').classList.contains('hidden')) return;
       const controls=[...$('modal').querySelectorAll('button:not(:disabled)')];

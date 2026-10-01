@@ -1090,12 +1090,15 @@
     let systemInfo = null;
     let systemPromise = null;
     let systemSection = "hardware";
+    let installedApps = null;
+    let installedAppsPromise = null;
+    let installedAppsLoadedAt = 0;
 
     function showTab(name) {
       currentTab = name;
       if (name === "processes") renderProcesses();
       if (name === "overview") renderHistory();
-      ["overview", "processes", "logs", "storage", "system", "settings"].forEach((tab) => {
+      ["overview", "processes", "logs", "storage", "applications", "system", "settings"].forEach((tab) => {
         $(`view-${tab}`).classList.toggle("hidden", tab !== name);
       });
       document.querySelectorAll("[data-tab]").forEach((button) => {
@@ -1106,6 +1109,7 @@
       if (name === "logs") startLogs();
       else stopLogs();
       if (name === "storage") loadStorage(false);
+      if (name === "applications") loadInstalledApps(false);
       if (name === "system") loadSystemInfo(false);
       refreshIcons();
     }
@@ -1636,6 +1640,137 @@
         systemPromise = null;
       }).finally(()=>{systemPromise=null;});
       return systemPromise;
+    }
+
+    function compareInstalledApps(left, right) {
+      const key = $("apps-sort").value;
+      const direction = $("apps-order").value === "desc" ? -1 : 1;
+      let result = 0;
+      if (key === "version") result = String(left.version || "").localeCompare(String(right.version || ""), undefined, { numeric: true, sensitivity: "base" });
+      else if (key === "path") result = String(left.path || "").localeCompare(String(right.path || ""), undefined, { sensitivity: "base" });
+      else if (key === "app_store") result = String(left.app_store || "").localeCompare(String(right.app_store || ""), undefined, { sensitivity: "base" });
+      else if (key === "signed") result = String(left.signed || "").localeCompare(String(right.signed || ""), undefined, { sensitivity: "base" });
+      else if (key === "developer") result = String(left.developer || "").localeCompare(String(right.developer || ""), undefined, { sensitivity: "base" });
+      else if (key === "team_id") result = String(left.team_id || "").localeCompare(String(right.team_id || ""), undefined, { sensitivity: "base" });
+      else if (key === "architecture") result = String(left.architecture || "").localeCompare(String(right.architecture || ""), undefined, { sensitivity: "base" });
+      else result = String(left.name || "").localeCompare(String(right.name || ""), undefined, { sensitivity: "base", numeric: true });
+      if (!result && key !== "name") {
+        result = String(left.name || "").localeCompare(String(right.name || ""), undefined, { sensitivity: "base", numeric: true });
+      }
+      return result * direction;
+    }
+
+    function revealApplicationButton(path) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "btn-ghost px-2 py-1 text-[11px]";
+      button.textContent = "Reveal";
+      button.title = "Reveal in Finder";
+      button.onclick = async () => {
+        button.disabled = true;
+        try {
+          await apiJSON("/api/applications/reveal", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ path }),
+          });
+        } catch (error) {
+          showToast(error.message);
+        } finally {
+          button.disabled = false;
+        }
+      };
+      return button;
+    }
+
+    function renderInstalledApps() {
+      const body = $("apps-body");
+      if (!installedApps) {
+        body.className = "tile p-5 text-sm text-slate-400";
+        body.textContent = "Installed applications are still loading.";
+        return;
+      }
+      const inventory = installedApps.applications || [];
+      const query = ($("apps-search").value || "").toLowerCase();
+      const store = $("apps-store").value;
+      const signed = $("apps-signed").value;
+      const location = $("apps-location").value;
+      const rows = inventory.filter((app) => {
+        if (store !== "all" && app.app_store !== store) return false;
+        if (signed !== "all" && app.signed !== signed) return false;
+        if (location !== "all" && app.location !== location) return false;
+        if (!query) return true;
+        const haystack = [app.name, app.version, app.developer, app.team_id, app.bundle_id, app.path, app.architecture, app.app_store, app.signed]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(query);
+      }).sort(compareInstalledApps);
+      const shown = Math.min(rows.length, 500);
+      body.className = "tile overflow-auto p-4";
+      body.replaceChildren();
+      const caption = document.createElement("p");
+      caption.className = "mb-3 text-xs text-slate-500";
+      const extra = [];
+      if (installedApps.cached) extra.push("cached");
+      if (installedApps.errors) extra.push(`${installedApps.errors} read errors`);
+      caption.textContent = `${shown} of ${inventory.length} applications${rows.length > 500 ? " · showing first 500; narrow the search" : ""}${extra.length ? ` · ${extra.join(" · ")}` : ""}`;
+      const table = document.createElement("table");
+      table.className = "w-full min-w-[1100px] text-left text-sm";
+      const head = document.createElement("thead");
+      head.innerHTML = '<tr class="text-[11px] uppercase tracking-[0.08em] text-slate-400"><th class="px-2 py-2">Name</th><th class="px-2 py-2">Version</th><th class="px-2 py-2">App Store</th><th class="px-2 py-2">Signed</th><th class="px-2 py-2">Developer</th><th class="px-2 py-2">Team ID</th><th class="px-2 py-2">Arch</th><th class="px-2 py-2">Path</th><th class="px-2 py-2">Reveal</th></tr>';
+      const tbody = document.createElement("tbody");
+      rows.slice(0, 500).forEach((app) => {
+        const tr = document.createElement("tr");
+        tr.className = "border-t border-slate-800/70";
+        [
+          app.name,
+          app.version,
+          app.app_store,
+          app.signed,
+          app.developer,
+          app.team_id,
+          app.architecture,
+          app.path,
+        ].forEach((value, index) => {
+          const td = document.createElement("td");
+          td.className = index === 7 ? "max-w-[16rem] truncate px-2 py-2 font-mono text-[11px] text-slate-400" : "max-w-[12rem] truncate px-2 py-2 text-slate-200";
+          td.textContent = value || "—";
+          td.title = value || "";
+          tr.appendChild(td);
+        });
+        const action = document.createElement("td");
+        action.className = "px-2 py-2";
+        if (app.path) action.appendChild(revealApplicationButton(app.path));
+        tr.appendChild(action);
+        tbody.appendChild(tr);
+      });
+      table.append(head, tbody);
+      body.append(caption, table);
+    }
+
+    async function loadInstalledApps(force) {
+      if (installedApps && !force && Date.now() - installedAppsLoadedAt < 300000) {
+        renderInstalledApps();
+        return;
+      }
+      if (installedAppsPromise) return installedAppsPromise;
+      $("apps-body").className = "tile p-5 text-sm text-slate-400";
+      $("apps-body").textContent = "Scanning /Applications and ~/Applications. Reading codesign metadata can take a minute on the first pass.";
+      installedAppsPromise = (async () => {
+        const response = await fetch(`/api/applications?force=${Boolean(force)}`);
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(errorDetail(body, "Applications inventory failed"));
+        installedApps = body;
+        installedAppsLoadedAt = Date.now();
+        $("apps-age").textContent = `Checked ${body.checked_at}${body.cached ? " · cached" : ""} · ${body.count || 0} apps`;
+        renderInstalledApps();
+      })().catch((error) => {
+        $("apps-body").className = "tile p-5 text-sm text-red-300";
+        $("apps-body").textContent = error.message || "Applications inventory failed.";
+        installedAppsPromise = null;
+      }).finally(() => { installedAppsPromise = null; });
+      return installedAppsPromise;
     }
 
     document.querySelectorAll("[data-tab]").forEach((button) => {

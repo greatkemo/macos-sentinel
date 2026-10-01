@@ -210,6 +210,10 @@ body.sidebar-collapsed #app-sidebar .sidebar-header-row {justify-content:center}
           <i data-lucide="hard-drive" class="h-4 w-4 shrink-0"></i>
           <span class="nav-label">Storage</span>
         </button>
+        <button type="button" data-tab="applications" class="nav-btn flex w-full items-center gap-3 border-r-2 border-transparent px-4 py-2.5 text-left text-sm font-medium text-slate-300 hover:bg-slate-800/60" title="Applications">
+          <i data-lucide="app-window" class="h-4 w-4 shrink-0"></i>
+          <span class="nav-label">Applications</span>
+        </button>
         <button type="button" data-tab="system" class="nav-btn flex w-full items-center gap-3 border-r-2 border-transparent px-4 py-2.5 text-left text-sm font-medium text-slate-300 hover:bg-slate-800/60" title="System Info">
           <i data-lucide="laptop" class="h-4 w-4 shrink-0"></i>
           <span class="nav-label">System Info</span>
@@ -690,6 +694,59 @@ body.sidebar-collapsed #app-sidebar .sidebar-header-row {justify-content:center}
             <p class="mt-2 text-xs text-slate-500">Changes compare complete scans in this server session. Missing or unlisted children are not treated as deleted. Up to 16 folder baselines are retained.</p>
             <div id="dir-list" class="mt-4 space-y-3"></div>
           </article>
+        </div>
+
+        <!-- Applications tab: /Applications and ~/Applications only. -->
+        <div id="view-applications" class="hidden space-y-4">
+          <div class="flex flex-wrap items-end gap-3">
+            <button id="apps-refresh" class="btn-ghost" type="button">Refresh</button>
+            <label class="text-xs text-slate-400">Find
+              <input id="apps-search" class="rounded bg-slate-800 p-2" type="search" placeholder="Name, developer, team ID, path">
+            </label>
+            <label class="text-xs text-slate-400">App Store
+              <select id="apps-store" class="rounded bg-slate-800 p-2">
+                <option value="all">All</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </label>
+            <label class="text-xs text-slate-400">Signed
+              <select id="apps-signed" class="rounded bg-slate-800 p-2">
+                <option value="all">All</option>
+                <option value="Yes">Yes</option>
+                <option value="Ad-hoc">Ad-hoc</option>
+                <option value="No">No</option>
+              </select>
+            </label>
+            <label class="text-xs text-slate-400">Location
+              <select id="apps-location" class="rounded bg-slate-800 p-2">
+                <option value="all">All</option>
+                <option value="Applications">/Applications</option>
+                <option value="User">~/Applications</option>
+              </select>
+            </label>
+            <label class="text-xs text-slate-400">Sort
+              <select id="apps-sort" class="rounded bg-slate-800 p-2">
+                <option value="name">Name</option>
+                <option value="version">Version</option>
+                <option value="app_store">App Store</option>
+                <option value="signed">Signed</option>
+                <option value="developer">Developer</option>
+                <option value="team_id">Team ID</option>
+                <option value="architecture">Architecture</option>
+                <option value="path">Path</option>
+              </select>
+            </label>
+            <label class="text-xs text-slate-400">Order
+              <select id="apps-order" class="rounded bg-slate-800 p-2">
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+              </select>
+            </label>
+            <span id="apps-age" class="text-xs text-slate-500"></span>
+          </div>
+          <p class="text-xs text-slate-500">Lists app bundles from <span class="font-mono text-slate-400">/Applications</span> and <span class="font-mono text-slate-400">~/Applications</span> only — not OS apps under <span class="font-mono text-slate-400">/System</span>. Signing and App Store status come from each bundle’s receipt and codesign metadata.</p>
+          <div id="apps-body" class="tile p-5 text-sm text-slate-400">Open this tab to scan installed applications. The first pass runs codesign on each app and can take a minute; later visits use a 5 minute cache.</div>
         </div>
 
         <!-- System Info tab: system_profiler property cards. -->

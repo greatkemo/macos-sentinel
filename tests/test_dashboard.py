@@ -68,6 +68,40 @@ class Parsers(unittest.TestCase):
         self.assertEqual(collectors.app_kind('/usr/libexec/helpd', None), 'system')
         self.assertEqual(collectors.app_kind('/Applications/Example.app', 'identified_developer'), 'third-party')
         self.assertEqual(collectors.app_kind('/Applications/Store.app', 'mac_app_store'), 'third-party')
+    def test_codesign_parser_developer_id_and_mas(self):
+        from dashboard.installed_apps import parse_codesign_output
+        developer = parse_codesign_output(
+            'Authority=Developer ID Application: AgileBits Inc. (2BUA8C4S2C)\n'
+            'Authority=Developer ID Certification Authority\n'
+            'TeamIdentifier=2BUA8C4S2C\n'
+            'Format=app bundle with Mach-O thin (arm64)\n'
+        )
+        self.assertEqual(developer['signed'], 'Yes')
+        self.assertEqual(developer['developer'], 'AgileBits Inc.')
+        self.assertEqual(developer['team_id'], '2BUA8C4S2C')
+        self.assertEqual(developer['format_arches'], 'arm64')
+        self.assertFalse(developer['app_store_authority'])
+        mas = parse_codesign_output(
+            'Authority=Apple Mac OS Application Signing\n'
+            'Authority=Apple Worldwide Developer Relations Certification Authority\n'
+            'TeamIdentifier=2BUA8C4S2C\n'
+        )
+        self.assertTrue(mas['app_store_authority'])
+        self.assertEqual(mas['signed'], 'Yes')
+        adhoc = parse_codesign_output('Signature=adhoc\nTeamIdentifier=not set\n')
+        self.assertEqual(adhoc['signed'], 'Ad-hoc')
+        self.assertIsNone(adhoc['team_id'])
+    def test_resolve_application_path_roots(self):
+        from dashboard.installed_apps import resolve_application_path
+        with tempfile.TemporaryDirectory() as root:
+            fake = Path(root) / 'Example.app'
+            fake.mkdir()
+            with patch('dashboard.installed_apps.application_roots', return_value=[Path(root)]):
+                self.assertEqual(resolve_application_path(str(fake)), fake.resolve())
+                with self.assertRaises(CommandFailed):
+                    resolve_application_path(str(Path(root) / 'not-an-app'))
+            with self.assertRaises(CommandFailed):
+                resolve_application_path('/System/Applications/Calculator.app')
     def test_core_order_not_invented(self):
         self.assertEqual(collectors.classify_cores(4,2,2),['Core']*4)
     def test_memory_breakdown_includes_residual(self):
@@ -259,6 +293,31 @@ class StorageTests(unittest.IsolatedAsyncioTestCase):
                 with self.assertRaises(app.HTTPException):
                     await app.reveal_storage(app.RevealRequest(path='/'))
                 self.assertEqual(command.await_count,1)
+
+    async def test_application_reveal_validates_bundle(self):
+        from unittest.mock import AsyncMock
+        with tempfile.TemporaryDirectory() as root:
+            bundle = Path(root) / 'Example.app'
+            bundle.mkdir()
+            with patch('dashboard.installed_apps.application_roots', return_value=[Path(root)]), patch.object(app, 'run_command', new_callable=AsyncMock, return_value=(0, '', '')) as command:
+                await app.reveal_application(app.ApplicationRevealRequest(path=str(bundle)))
+                command.assert_awaited_once_with(['/usr/bin/open', '-R', str(bundle.resolve())], timeout=5)
+                with self.assertRaises(app.HTTPException):
+                    await app.reveal_application(app.ApplicationRevealRequest(path='/System/Applications/Calculator.app'))
+                self.assertEqual(command.await_count, 1)
+
+    async def test_applications_endpoint_uses_cache(self):
+        payload = {'ok': True, 'checked_at': 'now', 'roots': ['/Applications'], 'count': 1, 'applications': [{'name': 'Example'}], 'errors': 0}
+        app._applications_cache['payload'] = None
+        app._applications_cache['expires'] = 0.0
+        with patch('app.collect_installed_applications', return_value=dict(payload)) as collect:
+            first = await app.get_installed_applications(force=False)
+            second = await app.get_installed_applications(force=False)
+            forced = await app.get_installed_applications(force=True)
+        self.assertFalse(first['cached'])
+        self.assertTrue(second['cached'])
+        self.assertFalse(forced['cached'])
+        self.assertEqual(collect.call_count, 2)
 
     async def test_small_real_scan(self):
         with tempfile.TemporaryDirectory() as root:
