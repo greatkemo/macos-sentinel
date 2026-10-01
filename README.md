@@ -14,8 +14,8 @@ The app shells out to read-only native tools such as `sysctl`, `sw_vers`, `vm_st
 ## Install
 
 ```sh
-git clone https://github.com/greatkemo/macos-system-dashboard.git
-cd macos-system-dashboard
+git clone https://github.com/greatkemo/macos-sentinel.git
+cd macos-sentinel
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
