@@ -191,9 +191,6 @@ body.sidebar-collapsed #app-sidebar .sidebar-header-row {justify-content:center}
             <h1 class="text-[15px] font-semibold text-white">macOS Sentinel</h1>
             <p class="text-xs text-slate-500">Local monitor</p>
           </div>
-          <button id="theme-toggle" type="button" class="btn-ghost h-8 w-8 shrink-0 px-0" aria-pressed="false" aria-label="Switch to light mode">
-            <i data-lucide="sun" class="h-4 w-4"></i>
-          </button>
         </div>
       </div>
       <nav class="flex flex-1 flex-col py-3" aria-label="Sections">
@@ -272,6 +269,9 @@ body.sidebar-collapsed #app-sidebar .sidebar-header-row {justify-content:center}
             <span id="conn-dot" class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
             <span id="conn-label">Connecting</span>
             <span id="conn-url" class="metric hidden text-[10px] opacity-70 sm:inline">ws://127.0.0.1:8000/ws</span>
+          </button>
+          <button id="theme-toggle" type="button" class="btn-ghost h-8 w-8 shrink-0 px-0" aria-pressed="false" aria-label="Switch to light mode" title="Toggle light/dark mode">
+            <i data-lucide="sun" class="h-4 w-4"></i>
           </button>
         </div>
       </div>
@@ -585,7 +585,7 @@ body.sidebar-collapsed #app-sidebar .sidebar-header-row {justify-content:center}
       <button id="session-peak" type="button" class="btn-ghost">Investigate session A peak</button>
       </details>
     </section>
-              <p class="text-xs text-slate-500">Theme switches from the sidebar sun/moon control. Live instruments stay on Overview.</p>
+              <p class="text-xs text-slate-500">Theme switches from the Tools toolbar sun/moon control. Live instruments stay on Overview.</p>
         </div>
 
         <!-- Processes tab: flat list or parent-child tree, plus the inspector drawer. -->

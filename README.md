@@ -2,22 +2,62 @@
 
 A local macOS system dashboard with a FastAPI backend and an offline-capable browser interface. CPU, memory, network and process telemetry come from the Mac running the server. The dark sidebar layout and existing Overview, Processes, Logs, Storage and System Info views are retained.
 
-## Run
+## Requirements
 
-Requires macOS and Python 3.13; the implementation is exercised with Python 3.13. The native tools used are `sysctl`, `sw_vers`, `vm_stat`, `pmset`, `ioreg`, `diskutil`, `df`, `du`, `log`, `lsof`, `networkQuality`, `softwareupdate` and `system_profiler`. Missing or restricted data is reported as unavailable/partial rather than fabricated.
+- macOS (Apple Silicon or Intel)
+- Python **3.13** (the project is exercised with 3.13)
+- A modern browser on the same Mac
+- Optional: Node.js only if you want to rebuild Tailwind CSS or run the browser smoke tests
+
+The app shells out to read-only native tools such as `sysctl`, `sw_vers`, `vm_stat`, `pmset`, `ioreg`, `diskutil`, `df`, `du`, `log`, `lsof`, `networkQuality`, `softwareupdate`, `system_profiler`, and `sips`. Missing or restricted data is reported as unavailable/partial rather than fabricated.
+
+## Install
 
 ```sh
+git clone https://github.com/greatkemo/macos-system-dashboard.git
+cd macos-system-dashboard
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
+```
+
+You do **not** need `npm install` for normal use: Chart.js, Lucide, and compiled Tailwind CSS are already vendored under `static/`.
+
+## Run
+
+With the virtualenv active:
+
+```sh
 python app.py
 ```
 
-Open **http://127.0.0.1:8000** or **http://localhost:8000**. Stop with Ctrl+C. To choose another loopback port, use `SENTINEL_PORT=8001 python app.py` and open that port. Run one server worker: telemetry, sessions, cache and scan ownership are intentionally process-local.
+Then open **http://127.0.0.1:8000** or **http://localhost:8000**.
 
-Restart the server after backend changes. Reload the page after a restart because the session token rotates. Frontend responses use `no-store`. There is no runtime Node requirement or CDN connection: pinned Chart.js, Lucide and compiled Tailwind CSS are served from `static/`.
+Stop the server with Ctrl+C.
 
-Software-update and bandwidth-consuming network-quality checks run only when their buttons are pressed. Opening Storage starts a directory scan; System Info starts an inventory lookup. There is no installation, deletion or automatic system cleanup feature.
+### Faster local launch
+
+After install, you can double-click **Launch Dashboard.command** in the project folder. It reuses a healthy existing server when possible, opens the browser, and refuses an occupied non-dashboard port. It expects the `.venv` setup above; it does not install dependencies.
+
+### Port and process notes
+
+- Default bind: `127.0.0.1:8000` (localhost only)
+- Another port: `SENTINEL_PORT=8001 python app.py`
+- Run **one** server worker: telemetry, sessions, cache, and scan ownership are process-local
+- After backend changes, restart the server
+- After a restart, reload the page — the session token rotates each run
+- Frontend responses use `no-store`
+
+### Optional: rebuild CSS / run tests
+
+```sh
+npm ci
+npm run build:css
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m unittest discover -s tests -v
+node --test tests/frontend.test.cjs
+```
+
+Software-update and bandwidth-consuming network-quality checks run only when their toolbar buttons are pressed. Opening Storage starts a directory scan; System Info starts an inventory lookup. There is no installation, deletion, or automatic system cleanup feature.
 
 ## Features
 
