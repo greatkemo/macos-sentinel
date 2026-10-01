@@ -95,6 +95,8 @@ class SecurityTests(unittest.IsolatedAsyncioTestCase):
         status,body,headers=await request('/',token=None,origin=None)
         self.assertEqual(status,200)
         self.assertIn(app.SESSION_TOKEN.encode(),body)
+        self.assertIn(f'v{app.APP_VERSION}'.encode(),body)
+        self.assertNotIn(b'__APP_VERSION__',body)
         self.assertNotIn(b'<script src="https://',body)
         self.assertIn(b"frame-ancestors 'none'",headers[b'content-security-policy'])
         self.assertEqual(headers[b'cache-control'],b'no-store')

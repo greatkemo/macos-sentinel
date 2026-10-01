@@ -2,6 +2,7 @@
   "name": "macos-sentinel-dashboard",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "build:css": "tailwindcss -c tailwind.config.cjs -i static/source.css -o static/dashboard.css --minify",
     "test": "node --test tests/frontend.test.cjs",

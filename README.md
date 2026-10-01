@@ -5,23 +5,151 @@ A local macOS system dashboard with a FastAPI backend and an offline-capable bro
 ## Requirements
 
 - macOS (Apple Silicon or Intel)
-- Python **3.13** (the project is exercised with 3.13)
+- Python **3.13 or newer** (macOS often ships with an older `python3`, commonly 3.9 — that is not enough)
 - A modern browser on the same Mac
 - Optional: Node.js only if you want to rebuild Tailwind CSS or run the browser smoke tests
 
 The app shells out to read-only native tools such as `sysctl`, `sw_vers`, `vm_stat`, `pmset`, `ioreg`, `diskutil`, `df`, `du`, `log`, `lsof`, `networkQuality`, `softwareupdate`, `system_profiler`, and `sips`. Missing or restricted data is reported as unavailable/partial rather than fabricated.
 
+Current release: see `VERSION` and [`CHANGELOG.md`](CHANGELOG.md).
+
 ## Install
+
+### 1. Get Python 3.13
+
+macOS often ships with `/usr/bin/python3` at **3.9** (or another version below 3.13). That system interpreter is not enough for this project.
+
+Check what you have:
+
+```sh
+python3 --version
+which python3
+python3.13 --version   # may fail until 3.13 is installed
+```
+
+#### Option A — Homebrew (recommended)
+
+**Install Homebrew** (skip if `brew --version` already works). Official one-liner from [brew.sh](https://brew.sh):
+
+```sh
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+Follow the script’s “Next steps” so `brew` is on your PATH.
+
+- **Apple Silicon** (common): add Homebrew to your shell profile, then reload:
+
+```sh
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+eval "$(/opt/homebrew/bin/brew shellenv)"
+brew --version
+```
+
+- **Intel Mac**: Homebrew usually lands in `/usr/local`. If `brew` is missing after install:
+
+```sh
+echo 'eval "$(/usr/local/bin/brew shellenv)"' >> ~/.zprofile
+eval "$(/usr/local/bin/brew shellenv)"
+brew --version
+```
+
+If the installer asks for **Xcode Command Line Tools**, accept the prompt (or run `xcode-select --install`) and re-run the Homebrew install if it did not finish.
+
+**Install Python 3.13 with Homebrew:**
+
+```sh
+brew update
+brew install python@3.13
+python3.13 --version
+```
+
+Optional — put `python3.13` earlier on your PATH:
+
+```sh
+brew link python@3.13 --force --overwrite
+```
+
+If `python3.13` is still not found:
+
+```sh
+brew --prefix python@3.13
+# Use that prefix’s bin when creating the venv, for example:
+# $(brew --prefix python@3.13)/bin/python3.13 -m venv .venv
+```
+
+Open a **new terminal** after installing Homebrew so PATH changes apply.
+
+#### Option B — python.org installer
+
+Download the macOS installer from [python.org/downloads](https://www.python.org/downloads/) (3.13.x). Prefer the `python3.13` binary it installs (often under `/Library/Frameworks/...` or `/usr/local/bin`), **not** the Apple system `/usr/bin/python3`.
+
+### 2. Clone and create a venv with 3.13
+
+Always create the virtualenv with **3.13**, then use that venv’s `python` and `pip`:
 
 ```sh
 git clone https://github.com/greatkemo/macos-sentinel.git
 cd macos-sentinel
-python3 -m venv .venv
+python3.13 -m venv .venv
 source .venv/bin/activate
+python --version   # must show 3.13.x
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
+If you already created `.venv` with an older Python, recreate it:
+
+```sh
+deactivate 2>/dev/null || true
+rm -rf .venv
+python3.13 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+`app.py` exits with a short install hint if the active interpreter is older than 3.13.
+
 You do **not** need `npm install` for normal use: Chart.js, Lucide, and compiled Tailwind CSS are already vendored under `static/`.
+
+### Install troubleshooting
+
+**`python3.13: command not found`**  
+Python 3.13 is not on your PATH. Finish the Homebrew or python.org install above, open a new terminal, and try again. Do not fall back to `/usr/bin/python3` for the venv.
+
+**`macOS Sentinel requires Python 3.13 or newer (found 3.9.x)`**  
+The shell activated a venv (or `python`) built with the system interpreter. Recreate `.venv` with `python3.13 -m venv .venv` as in step 2.
+
+**`WARNING: You are using pip version … A new release of pip is available`**  
+This is only a notice. It does not mean install failed. Either ignore it, or upgrade inside the venv before installing requirements:
+
+```sh
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Prefer `python -m pip …` over bare `pip …` so you always use the venv’s pip.
+
+**`ERROR: Could not find a version that satisfies the requirement …` / `No matching distribution found` / `ResolutionImpossible`**  
+Almost always one of:
+
+1. **Wrong Python** — the active interpreter is not 3.13+ (`python --version`). Recreate the venv with `python3.13`.
+2. **Stale pip** — upgrade pip in the venv (`python -m pip install --upgrade pip`), then retry `python -m pip install -r requirements.txt`.
+3. **Broken or mixed environment** — delete and recreate `.venv` (commands in step 2). Mixing system packages with the project venv causes confusing resolution errors.
+4. **Network / index issues** — confirm you can reach PyPI (`python -m pip install -r requirements.txt -v`). Corporate proxies or offline networks need a reachable index; do not edit pin versions casually to “make it work” on an old Python.
+
+**`externally-managed-environment` (PEP 668)**  
+You ran `pip install` against the system/Homebrew Python instead of the project venv. Activate `.venv` first (`source .venv/bin/activate`), or use `.venv/bin/python -m pip install -r requirements.txt`.
+
+**`brew: command not found`**  
+Homebrew is not installed or not on PATH. Run the install script in Option A, then `eval "$(/opt/homebrew/bin/brew shellenv)"` (Apple Silicon) or `eval "$(/usr/local/bin/brew shellenv)"` (Intel), and open a new terminal.
+
+**Homebrew `brew link` conflicts**  
+You can skip linking and invoke the full path from `brew --prefix python@3.13` when creating the venv. Linking is optional.
+
+**SSL / certificate errors while downloading packages**  
+Update pip and certifi inside the venv, or use the official python.org installer (it bundles certificates). Retry after a normal network connection is available.
 
 ## Run
 
@@ -105,6 +233,9 @@ This protects against untrusted web origins; it is not multi-user authentication
 | File | Responsibility |
 | --- | --- |
 | `app.py` | API routes, command lifecycle, caches, startup/shutdown |
+| `VERSION` | Release version injected into the sidebar UI |
+| `CHANGELOG.md` | Release notes |
+| `LICENSE` | MIT license for this project |
 | `dashboard/security.py` | Host, Origin, session and response-header controls |
 | `dashboard/collectors.py` | Native parsing and read-only system collectors |
 | `dashboard/native_capacity.py` | Read-only Foundation capacity bridge |
@@ -237,3 +368,9 @@ Additional end-to-end checks (fixture server on port 8001):
 ```sh
 SENTINEL_TEST_URL=http://127.0.0.1:8001 npm run test:milestones
 ```
+
+## License
+
+macOS Sentinel is released under the [MIT License](LICENSE). Copyright (c) 2026 Kamal Taynaz.
+
+Third-party front-end assets under `static/vendor/` keep their own licenses (Chart.js, Lucide, Tailwind).

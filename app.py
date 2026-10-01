@@ -3,7 +3,7 @@
 Telemetry is pushed over WebSocket once a second. Native `networkQuality`
 and `softwareupdate` checks run in non-blocking subprocesses.
 
-    python3 -m venv .venv
+    python3.13 -m venv .venv
     source .venv/bin/activate
     python -m pip install -r requirements.txt
     python app.py
@@ -23,6 +23,7 @@ import platform
 import re
 import signal
 import secrets
+import sys
 from concurrent.futures import ThreadPoolExecutor
 import subprocess
 import threading
@@ -31,6 +32,17 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
+if sys.version_info < (3, 13):
+    raise SystemExit(
+        f"macOS Sentinel requires Python 3.13 or newer (found {platform.python_version()}).\n"
+        "macOS often ships with an older python3. Install 3.13, then recreate the venv:\n"
+        "  brew install python@3.13\n"
+        "  python3.13 -m venv .venv\n"
+        "  source .venv/bin/activate\n"
+        "  python -m pip install --upgrade pip\n"
+        "  python -m pip install -r requirements.txt\n"
+        "See README.md (Install troubleshooting) for pip warnings and unmet requirements."
+    )
 import psutil
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, Response
@@ -53,8 +65,10 @@ from dashboard.collectors import (
 )
 
 HOST = "127.0.0.1"
+ROOT = Path(__file__).resolve().parent
 PORT = int(os.environ.get("SENTINEL_PORT", "8000"))
-INDEX_PATH = Path(__file__).resolve().parent / "index.html"
+INDEX_PATH = ROOT / "index.html"
+APP_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 NETWORK_QUALITY_TIMEOUT = 120
 SOFTWARE_UPDATE_TIMEOUT = 180
 
@@ -210,13 +224,15 @@ async def lifespan(app: FastAPI):
             sampler.close()
         executor.shutdown(wait=False, cancel_futures=True)
 
-app = FastAPI(title="macOS Sentinel", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title="macOS Sentinel", version=APP_VERSION, lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 app.add_middleware(LocalSession, token=SESSION_TOKEN, port=PORT)
 app.mount("/static", StaticFiles(directory=INDEX_PATH.parent / "static"), name="static")
 
 @app.get("/")
 async def index() -> HTMLResponse:
-    return HTMLResponse(INDEX_PATH.read_text().replace("__SESSION_TOKEN__", SESSION_TOKEN))
+    html = INDEX_PATH.read_text(encoding="utf-8")
+    html = html.replace("__SESSION_TOKEN__", SESSION_TOKEN).replace("__APP_VERSION__", APP_VERSION)
+    return HTMLResponse(html)
 
 
 @app.get("/favicon.ico")
