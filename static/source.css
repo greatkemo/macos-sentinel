@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+    @layer components {
+      .tile {
+        @apply relative rounded-2xl border border-slate-800/80 bg-slate-900/70 shadow-2xl backdrop-blur-xl transition-[border-color,box-shadow,transform] duration-300;
+      }
+      .tile:hover {
+        @apply border-slate-700/90;
+      }
+      .label {
+        @apply text-[11px] font-medium uppercase tracking-[0.09em] text-slate-400;
+      }
+      .metric {
+        @apply font-mono tabular-nums;
+      }
+      .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0;
+      }
+      .btn-primary {
+        @apply btn bg-blue-500 text-white shadow-lg shadow-blue-500/20 hover:bg-blue-400 hover:shadow-blue-500/30;
+      }
+      .btn-ghost {
+        @apply btn border border-slate-700/80 bg-slate-800/50 text-slate-200 hover:border-slate-500 hover:bg-slate-800;
+      }
+      .btn-danger {
+        @apply btn bg-red-500 text-white shadow-lg shadow-red-500/20 hover:bg-red-400;
+      }
+      .chip {
+        @apply inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-medium;
+      }
+      .bar-track {
+        @apply h-1.5 w-full overflow-hidden rounded-full bg-slate-800;
+      }
+      .bar-fill {
+        @apply h-full rounded-full transition-[width,background-color] duration-700 ease-out;
+      }
+    }
+  

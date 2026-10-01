@@ -1,0 +1,10 @@
+{
+  "chart-4.4.6.js": {
+    "source": "https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js",
+    "sha256": "9653a0813db743bbe78332a3896e28c7bc7546e4fff51e7e979e908d1f0471d1"
+  },
+  "lucide-0.468.0.js": {
+    "source": "https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js",
+    "sha256": "3411692820cb8d47543f69496aa25fd603a358f4498046f41c508a5a3342210e"
+  }
+}

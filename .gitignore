@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+test-results/
+playwright-report/
+
+.sentinel-data/
+dist/
+output/
+.DS_Store
+*.egg-info/
+.Python

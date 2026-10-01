@@ -1,0 +1,15 @@
+{
+  "name": "macos-sentinel-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.cjs -i static/source.css -o static/dashboard.css --minify",
+    "test": "node --test tests/frontend.test.cjs",
+    "test:browser": "node tests/browser-smoke.cjs",
+    "test:milestones": "node tests/milestones-browser.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.58.2",
+    "tailwindcss": "3.4.17"
+  }
+}
